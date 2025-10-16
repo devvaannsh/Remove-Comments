@@ -43,6 +43,40 @@ define (function (require, exports, module) {
         return commentRanges;
     }
 
+    function _comparePos(a, b) {
+        if (a.line < b.line) return -1;
+        if (a.line > b.line) return 1;
+        if (a.ch < b.ch) return -1;
+        if (a.ch > b.ch) return 1;
+        return 0;
+    }
+
+    function _rangesOverlap(r1, r2) {
+        return _comparePos(r1.from, r2.to) <= 0 && _comparePos(r1.to, r2.from) >= 0;
+    }
+
+    // this function is responsible to remove all the comments that are present within selection
+    function _getAllCommentsWithinSelection(editor, selection) {
+        // first we get all the comment ranges in the file [this is needed otherwise codemirror fails to figure out token types properly]
+        const commentRanges = _getAllComments(editor);
+        const selRange = { from: selection.start, to: selection.end };
+        const overlappingComments = [];
+
+        for (const range of commentRanges) {
+            if (_rangesOverlap(range, selRange)) {
+                // clip the comment range to the selection bounds
+                const clippedRange = {
+                    from: _comparePos(range.from, selRange.from) < 0 ? selRange.from : range.from,
+                    to: _comparePos(range.to, selRange.to) > 0 ? selRange.to : range.to
+                };
+                overlappingComments.push(clippedRange);
+            }
+        }
+
+        return overlappingComments;
+    }
+
+
     // this function is responsible to remove the comments from the editor
     // it takes the range of all the comments as a param: commentsToRemove
     function _removeAllComments(editor, commentsToRemove) {
@@ -69,7 +103,14 @@ define (function (require, exports, module) {
         const editor = EditorManager.getActiveEditor();
         if (!editor) { return; }
 
-        const commentsToRemove = _getAllComments(editor);
+        let commentsToRemove;
+        // check whether there is selection or do we need to remove from the whole file
+        if (editor.hasSelection()) {
+            const selection = editor.getSelection();
+            commentsToRemove = _getAllCommentsWithinSelection(editor, selection);
+        } else {
+            commentsToRemove = _getAllComments(editor);
+        }
         _removeAllComments(editor, commentsToRemove);
     }
 
