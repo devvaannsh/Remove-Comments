@@ -1,19 +1,37 @@
 {
-    "title": "Name of the extension",
-    "name": "github-<owner>-<repo>",
-    "description": "A sample extension.",
+    "title": "Remove Comments",
+    "name": "github-devvaannsh-remove-comments",
+    "description": "Remove single-line and multi-line comments from any file with just one click.",
     "version": "0.0.1",
     "license": "MIT",
-    "author": "your name (https://github.com/<your github id>)",
-    "homepage": "<project web page url or this github repo url if no website available>",
+    "author": "Pluto https://github.com/devvaannsh",
+    "homepage": "https://github.com/devvaannsh/Remove-Comments",
     "engines": {
         "brackets": ">=2.0.0"
     },
-    "categories": "demo",
+    "categories": "formatting",
     "keywords": [
-        "phcode",
-        "extension",
-        "demo"
+        "comments",
+        "remove comments",
+        "delete comments",
+        "strip comments",
+        "clean code",
+        "comment remover",
+        "comment cleaner",
+        "uncomment",
+        "minify code",
+        "code cleanup",
+        "remove js comments",
+        "remove html comments",
+        "remove css comments",
+        "remove all comments",
+        "production ready",
+        "tidy code",
+        "clear comments",
+        "optimize code",
+        "brackets extension",
+        "phoenix code",
+        "codemirror"
     ],
     "files": [
         "main.js"
