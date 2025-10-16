@@ -1,44 +1,88 @@
-/*global define, brackets, $ */
+/* global define, brackets */
+/* eslint no-unused-vars: "warn" */
+// eslint-disable-next-line
+define (function (require, exports, module) {
+    const AppInit = brackets.getModule("utils/AppInit");
+    const CommandManager = brackets.getModule("command/CommandManager");
+    const Commands = brackets.getModule("command/Commands");
+    const Menus = brackets.getModule("command/Menus");
+    const EditorManager = brackets.getModule("editor/EditorManager");
 
-// See detailed docs in https://docs.phcode.dev/api/creating-extensions
+    // this function traverses the whole file and gets the ranges of all the comments in the file and returns it
+    function _getAllComments(editor) {
+        const totalLineCount = editor.lineCount();
+        let pos = { line: 0, ch: 0 };
+        let token;
+        const commentRanges = [];
 
-// A good place to look for code examples for extensions: https://github.com/phcode-dev/phoenix/tree/main/src/extensions/default
+        while (true) {
+            token = editor.getNextToken(pos, false, true);
 
-// A simple extension that adds an entry in "file menu> hello world"
-define(function (require, exports, module) {
-    "use strict";
+            // if token doesn't exist, there can be 2 possible cases
+            // 1: its an empty line, not the end of file. in that case we need to manually move the pos to next line
+            // 2: if its end of file, exit the loop
+            if (!token) {
+                if (pos.line >= totalLineCount - 1) { break; } // end of file
+                else {
+                    pos.line += 1;
+                    pos.ch = 0;
+                }
+            } else { // token exists, check for 'comment' type tokens
+                if (token.type && token.type.includes('comment')) {
+                    commentRanges.push({
+                        from: { line: token.line, ch: token.start },
+                        to: { line: token.line, ch: token.end }
+                    });
+                }
 
-    // Brackets modules
-    const AppInit = brackets.getModule("utils/AppInit"),
-        DefaultDialogs = brackets.getModule("widgets/DefaultDialogs"),
-        Dialogs = brackets.getModule("widgets/Dialogs"),
-        CommandManager = brackets.getModule("command/CommandManager"),
-        Menus = brackets.getModule("command/Menus");
+                pos.line = token.line;
+                pos.ch = token.end;
+            }
+        }
 
-    // Function to run when the menu item is clicked
-    function handleHelloWorld() {
-        Dialogs.showModalDialog(
-            DefaultDialogs.DIALOG_ID_INFO,
-            "hello",
-            "world"
-        );
+        return commentRanges;
+    }
+
+    // this function is responsible to remove the comments from the editor
+    // it takes the range of all the comments as a param: commentsToRemove
+    function _removeAllComments(editor, commentsToRemove) {
+        if (!commentsToRemove.length) { return; }
+
+        // first we sort it from bottom to top, so that when removing the positions doesn't get stale
+        commentsToRemove.sort((a, b) => {
+            if (b.from.line !== a.from.line) return b.from.line - a.from.line;
+            return b.from.ch - a.from.ch;
+        });
+
+        for (const range of commentsToRemove) {
+            editor.replaceRange('', range.from, range.to);
+        }
     }
     
-      // First, register a command - a UI-less object associating an id to a handler
-    var MY_COMMAND_ID = "helloworld.sayhello";   // package-style naming to avoid collisions
-    CommandManager.register("Hello World", MY_COMMAND_ID, handleHelloWorld);
+    // this is the main driver function that gets called when the 'Remove Comments' menu button is clicked
+    // it completes the comment removal in 2 steps:
+    // 1st: gets the ranges of all the comments in the file (because if we remove directly when traversing, the cursor position might get stale)
+    // 2nd: sorts it from bottom to top, then removes it
+    function handleMenuItemClick() {
+        const editor = EditorManager.getActiveEditor();
+        if (!editor) { return; }
 
-    // Then create a menu item bound to the command
-    // The label of the menu item is the name we gave the command (see above)
-    var menu = Menus.getMenu(Menus.AppMenuBar.FILE_MENU);
-    menu.addMenuItem(MY_COMMAND_ID);
+        const commentsToRemove = _getAllComments(editor);
+        _removeAllComments(editor, commentsToRemove);
+    }
+
+    // this function is all about registering the command and adding the menu item
+    function registerStuff() {
+        const MY_COMMAND_ID = "remove_comments";
+        CommandManager.register("Remove Comments", MY_COMMAND_ID, handleMenuItemClick);
     
-    // We could also add a key binding at the same time:
-    //menu.addMenuItem(MY_COMMAND_ID, "Ctrl-Alt-W");
-    // (Note: "Ctrl" is automatically mapped to "Cmd" on Mac)
+        const menu = Menus.getMenu(Menus.AppMenuBar.EDIT_MENU);
+        menu.addMenuItem(MY_COMMAND_ID, '', Menus.AFTER, Commands.EDIT_BEAUTIFY_CODE_ON_SAVE);
+    }
     
-    // Initialize extension once shell is finished initializing.
-    AppInit.appReady(function () {
-        console.log("hello world");
-    });
+	AppInit.appReady(function () {
+        setTimeout(() => {
+            registerStuff();
+        }, 100);
+	});
 });
