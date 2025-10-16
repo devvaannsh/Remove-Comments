@@ -54,11 +54,13 @@ define (function (require, exports, module) {
             return b.from.ch - a.from.ch;
         });
 
-        for (const range of commentsToRemove) {
-            editor.replaceRange('', range.from, range.to);
-        }
+        editor.document.batchOperation(function () {
+            for (const range of commentsToRemove) {
+                editor.replaceRange('', range.from, range.to);
+            }
+        });
     }
-    
+
     // this is the main driver function that gets called when the 'Remove Comments' menu button is clicked
     // it completes the comment removal in 2 steps:
     // 1st: gets the ranges of all the comments in the file (because if we remove directly when traversing, the cursor position might get stale)
@@ -75,11 +77,11 @@ define (function (require, exports, module) {
     function registerStuff() {
         const MY_COMMAND_ID = "remove_comments";
         CommandManager.register("Remove Comments", MY_COMMAND_ID, handleMenuItemClick);
-    
+
         const menu = Menus.getMenu(Menus.AppMenuBar.EDIT_MENU);
         menu.addMenuItem(MY_COMMAND_ID, '', Menus.AFTER, Commands.EDIT_BEAUTIFY_CODE_ON_SAVE);
     }
-    
+
 	AppInit.appReady(function () {
         setTimeout(() => {
             registerStuff();
